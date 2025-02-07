@@ -4,19 +4,18 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 import os
 
-def load_file(file_path):
-    """Load the file based on its type."""
-    if file_path.endswith('.xlsx'):
-        df = pd.read_excel(file_path, sheet_name=None)  # Load all sheets for Excel
-    elif file_path.endswith('.csv'):
-        df = pd.read_csv(file_path)  # Load CSV file
+def load_file(file):
+    # Load the file based on its type
+    if file.name.endswith('.xlsx'):
+        df = pd.read_excel(file, sheet_name=None)  # Load all sheets for Excel
+    elif file.name.endswith('.csv'):
+        df = pd.read_csv(file)  # Load CSV file
     else:
-        st.error("Unsupported file type. Please provide an Excel (.xlsx) or CSV (.csv) file.")
+        st.error("Unsupported file type. Please upload an Excel (.xlsx) or CSV (.csv) file.")
         return None
     return df
 
 def generate_audit_report(df):
-    """Generate an audit report from the DataFrame."""
     report = {}
     
     if isinstance(df, dict):  # If it's a dictionary, it means multiple sheets
@@ -38,7 +37,7 @@ def generate_audit_report(df):
     return report
 
 def display_audit_report(report):
-    """Display the audit report in the Streamlit app."""
+    # Display the audit report
     for sheet_name, details in report.items():
         st.subheader(f"Sheet: {sheet_name}")
         st.write(f"Row Count: {details['row_count']}")
@@ -49,13 +48,20 @@ def display_audit_report(report):
         st.write("---")
 
 def generate_pdf_report(report, filename):
-    """Generate a PDF report from the audit report."""
+    # Create a PDF report
     c = canvas.Canvas(filename, pagesize=letter)
     width, height = letter
 
     # Title
     c.setFont("Helvetica-Bold", 16)
     c.drawString(100, height - 50, "Final Audit Report")
+    
+    # Prepared for
+    c.setFont("Helvetica", 12)
+    c.drawString(100, height - 80, "Prepared for: [Chartered Accountant's Name]")
+    c.drawString(100, height - 95, "Prepared by: [Auditor's Name/Company Name]")
+    c.drawString(100, height - 110, "Date: [Insert Date]")
+    c.drawString(100, height - 125, "Report Reference: [Insert Reference Number]")
 
     # Executive Summary
     c.setFont("Helvetica-Bold", 14)
@@ -162,32 +168,56 @@ def generate_pdf_report(report, filename):
         c.drawString(100, y_position, line)
         y_position -= 15
 
+    # Appendices
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(100, y_position, "10. Appendices")
+    y_position -= 20
+    c.setFont("Helvetica", 10)
+    c.drawString(100, y_position, "- Appendix A: Detailed Transaction Data")
+    y_position -= 15
+    c.drawString(100, y_position, "- Appendix B: Supporting Documents")
+    y_position -= 15
+    c.drawString(100, y_position, "- Appendix C: Audit Methodology and Procedures")
+
+    # Contact Information
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(100, y_position, "Contact Information")
+    y_position -= 20
+    c.setFont("Helvetica", 10)
+    c.drawString(100, y_position, "For further inquiries, please contact:")
+    y_position -= 15
+    c.drawString(100, y_position, "Auditor's Name: [Your Name]")
+    y_position -= 15
+    c.drawString(100, y_position, "Email: [Your Email]")
+    y_position -= 15
+    c.drawString(100, y_position, "Phone: [Your Phone Number]")
+
     c.save()
 
-def generate_audit_report_from_file(file_path):
-    """Main function to generate an audit report from a specified file."""
-    st.title("Audit Report Generator")
+def main():
+    st.title("Excel/CSV Audit Report Generator")
 
-    # Load the file
-    df = load_file(file_path)
+    uploaded_file = st.file_uploader("Upload an Excel (.xlsx) or CSV (.csv) file", type=["xlsx", "csv"])
 
-    if df is not None:
-        # Generate the audit report
-        report = generate_audit_report(df)
+    if uploaded_file is not None:
+        # Load the file
+        df = load_file(uploaded_file)
 
-        # Display the audit report
-        display_audit_report(report)
+        if df is not None:
+            # Generate the audit report
+            report = generate_audit_report(df)
 
-        # Generate PDF report
-        pdf_filename = "audit_report.pdf"
-        generate_pdf_report(report, pdf_filename)
-        st.success(f"PDF report generated: {pdf_filename}")
+            # Display the audit report
+            display_audit_report(report)
 
-        # Provide a download link for the PDF
-        with open(pdf_filename, "rb") as f:
-            st.download_button("Download PDF Report", f, file_name=pdf_filename)
+            # Generate PDF report
+            pdf_filename = "audit_report.pdf"
+            generate_pdf_report(report, pdf_filename)
+            st.success(f"PDF report generated: {pdf_filename}")
+
+            # Provide a download link for the PDF
+            with open(pdf_filename, "rb") as f:
+                st.download_button("Download PDF Report", f, file_name=pdf_filename)
 
 if __name__ == "__main__":
-    # Specify the file path here
-    file_path = "/home/darling/Documents/audity/vouchers/Balancesheetnit3.csv"  # Change this to your actual file path
-    generate_audit_report_from_file(file_path)
+    main()
