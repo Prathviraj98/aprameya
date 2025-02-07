@@ -5,8 +5,7 @@ from fpdf import FPDF
 from datetime import datetime
 import re
 import os
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
+import hashlib  # Import hashlib for generating hash codes
 
 st.set_page_config(
     page_title="Bilgen",
@@ -50,6 +49,15 @@ def create_pdf(bill_data):
     pdf.output(pdf_file_name)
     
     return pdf_file_name
+
+# Function to generate hash for the PDF file
+def generate_pdf_hash(pdf_file_name):
+    hasher = hashlib.sha256()  # Using SHA-256 for hashing
+    with open(pdf_file_name, "rb") as pdf_file:
+        # Read the file in chunks to avoid memory issues with large files
+        for chunk in iter(lambda: pdf_file.read(4096), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
 
 # Function to validate PAN number
 def validate_pan(pan):
@@ -97,18 +105,22 @@ def main():
             
             # Prepare bill data
             bill_data = {
-                'Unique ID': unique_id,  # Changed from 'unique_id' to 'Unique ID'
+                'Unique ID': unique_id,
                 'Date': date,
                 'serial_number': serial_number,
                 'products': st.session_state.products,
                 'Total': Amount,
-                'pan_number': pan_number,  # Save PAN number
-                'Company Name': company_name  # Save company name
+                'pan_number': pan_number,
+                'Company Name': company_name
             }
             
             # Create PDF
             pdf_file_name = create_pdf(bill_data)
             st.success("Bill generated successfully!")
+            
+            # Generate hash for the PDF  SHA-256
+            pdf_hash = generate_pdf_hash(pdf_file_name)
+            st.write(f"PDF Hash: {pdf_hash}")  # Display the hash on the app
             
             # Read the PDF file to provide a download option
             if os.path.exists(pdf_file_name):
@@ -124,12 +136,13 @@ def main():
             
             # Save record to CSV with utf-8 encoding
             df = pd.DataFrame([{
-                'Unique ID': unique_id,  # Changed from 'unique_id' to 'Unique ID'
+                'Unique ID': unique_id,
                 'Date': date,
                 'serial_number': serial_number,
                 'Amount': Amount,
-                'pan_number': pan_number,  # Include PAN number in CSV
-                'Company Name': company_name  # Include company name in CSV
+                'pan_number': pan_number,
+                'Company Name': company_name,
+                'PDF Hash': pdf_hash  # Include PDF hash in CSV
             }])
             try:
                 df.to_csv('billing_records.csv', mode='a', header=not pd.io.common.file_exists('billing_records.csv'), index=False, encoding='utf-8')
